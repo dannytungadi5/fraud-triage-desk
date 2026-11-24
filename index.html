@@ -145,6 +145,8 @@ footer{
       <option value="builtin">Northbridge Mutual - March 2026 (built in)</option>
     </select>
     <input type="file" id="fileInput" accept=".csv,text/csv" aria-label="Upload CSV" title="Upload CSV">
+    <input type="text" id="urlInput" placeholder="or paste CSV URL" aria-label="CSV URL" style="width:170px">
+    <button id="loadUrlBtn" title="Load CSV from URL">Load URL</button>
     <button id="rulesBtn">Rules</button>
     <button id="exportBtn" class="primary">Export report</button>
   </div>
@@ -562,6 +564,15 @@ $("#fileInput").onchange=e=>{
   const rd=new FileReader();
   rd.onload=()=>{ try{ loadTransactions(parseCSV(String(rd.result)),file.name); }catch(err){ banner("error","Upload failed: "+err.message); } };
   rd.readAsText(file);
+};
+$("#loadUrlBtn").onclick=async()=>{
+  const url=$("#urlInput").value.trim();
+  if(!url){ banner("error","Enter a CSV URL first."); return; }
+  try{
+    const res=await fetch(url);
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    loadTransactions(parseCSV(await res.text()),url.split("/").pop()||url);
+  }catch(err){ banner("error","Upload failed: "+err.message); }
 };
 $("#exportBtn").onclick=()=>{
   const report={generated:new Date().toISOString(),dataset:$("#dataset").value,
