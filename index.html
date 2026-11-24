@@ -565,14 +565,19 @@ $("#fileInput").onchange=e=>{
   rd.onload=()=>{ try{ loadTransactions(parseCSV(String(rd.result)),file.name); }catch(err){ banner("error","Upload failed: "+err.message); } };
   rd.readAsText(file);
 };
-$("#loadUrlBtn").onclick=async()=>{
+$("#loadUrlBtn").onclick=()=>{
   const url=$("#urlInput").value.trim();
   if(!url){ banner("error","Enter a CSV URL first."); return; }
-  try{
-    const res=await fetch(url);
-    if(!res.ok) throw new Error("HTTP "+res.status);
-    loadTransactions(parseCSV(await res.text()),url.split("/").pop()||url);
-  }catch(err){ banner("error","Upload failed: "+err.message); }
+  const xhr=new XMLHttpRequest();
+  xhr.open("GET",url);
+  xhr.onload=()=>{
+    try{
+      if(xhr.status<200||xhr.status>=300) throw new Error("HTTP "+xhr.status);
+      loadTransactions(parseCSV(xhr.responseText),url.split("/").pop()||url);
+    }catch(err){ banner("error","Upload failed: "+err.message); }
+  };
+  xhr.onerror=()=>banner("error","Upload failed: network error");
+  xhr.send();
 };
 $("#exportBtn").onclick=()=>{
   const report={generated:new Date().toISOString(),dataset:$("#dataset").value,
