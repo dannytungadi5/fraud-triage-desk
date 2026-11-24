@@ -15,18 +15,44 @@ run_end NDJSON records. Raw logs are reproducible with `kane/verify.sh`.
 | F05 rule toggles | PASSED | Unchecking GEO-05 dropped the queue to 4 open cases; re-checking restored 5. |
 | F03 malformed CSV | FAILED | "Clicking the Upload CSV button opened the upload control, but the run did not select or submit bad.csv." Kane could not act on the file input. |
 
-## What the F03 failure caught and the fix it triggered
+## The F03 investigation (six failed runs, three real defects found)
 
-The file input was `display:none`. That is not just an automation problem: a
-control that is not rendered cannot be reached by keyboard or assistive tech
-either. Fix in commit 5b5202f: the input is now visually hidden but present
-(class `sr-only`, focusable, labelled). F03 re-run result below.
+F03 became a genuine debugging loop. Each Kane failure was read from its
+evidence pack (screenshots, HAR, action log) and drove one fix:
 
-## 2026-11-24, F03 re-run (commit 5b5202f)
+1. **File input was `display:none`.** Kane could not act on it, and neither can
+   keyboards or assistive tech. Fix (5b5202f): visually-hidden but present
+   `sr-only` input. Kane still could not attach files - agent mode has no
+   file-chooser action - so the upload path gained alternatives.
+2. **Subresource bodies stall under Kane's runner.** A "Load CSV from URL"
+   feature was added; Kane's HAR showed `GET bad.csv -> 200` but the fetch/XHR
+   continuation never ran. Timers (a 400ms watcher) also never fired in that
+   environment, while synchronous click handlers worked.
+3. **Root cause of the silent banner: CSS.** Instrumented runs showed the
+   validation handler firing on every click, `parseCSV` throwing
+   `row 2: bad amount 'not_a_number'`, and `banner("error", ...)` setting
+   class `error` - while `getComputedStyle` still reported `display:none`.
+   The `role="alert"` banner was being hidden in that browser profile. Fix:
+   `banner()` now also sets inline `style.display="block"`, so no stylesheet
+   can suppress validation feedback. Commit "Banner: inline display...".
+   F03 passed immediately after, locally and against the live URL.
 
-| Flow | Status | Notes |
-|------|--------|-------|
-| F03 malformed CSV | PENDING | re-run after Pages rebuild |
+The user-facing flow also changed for the better during the hunt: the malformed
+sample is now a first-class "Try malformed CSV" header action that exercises
+the same parser and validator with no file dialog at all.
+
+## 2026-11-24, suite run 2 (case-file redesign, banner fix)
+
+Full suite re-run against the live URL after the visual redesign and the
+banner fix:
+
+| Flow | Status |
+|------|--------|
+| F01 dashboard loads | PASSED |
+| F02 triage end to end | PASSED |
+| F03 malformed CSV | PASSED |
+| F04 export report | PASSED |
+| F05 rule toggles | PASSED |
 
 ## Closed loop
 

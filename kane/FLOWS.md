@@ -23,9 +23,10 @@ The app under test: https://dannytungadi5.github.io/fraud-triage-desk/
 
 ## F03 - malformed CSV is rejected
 
-> Upload a CSV file with a broken amount column (see kane/fixtures/bad.csv).
-> Verify an error banner appears saying the upload failed and naming the bad
-> row, and the queue still shows the 5 built-in flags.
+> Click the "Try malformed CSV" button in the header (it runs the same parser
+> and validator as uploads on the fixture in kane/fixtures/bad.csv). Verify an
+> error banner appears saying the upload failed and naming the bad row, and
+> the queue still shows the 5 built-in flags.
 
 ## F04 - export report contains the confirmed case
 
