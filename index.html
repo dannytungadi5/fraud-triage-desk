@@ -143,6 +143,7 @@ footer{
   <div class="controls">
     <select id="dataset" aria-label="Dataset">
       <option value="builtin">Northbridge Mutual - March 2026 (built in)</option>
+      <option value="badsample">Malformed sample - row 2 bad amount</option>
     </select>
     <input type="file" id="fileInput" accept=".csv,text/csv" aria-label="Upload CSV" title="Upload CSV">
     <input type="text" id="urlInput" placeholder="or paste CSV URL" aria-label="CSV URL" style="width:170px">
@@ -361,6 +362,10 @@ TXN-100016,2026-03-17T17:59:00+07:00,A-1022,Putri Saputra,transfer_out,1627.33,b
 TXN-100042,2026-03-17T18:17:00+07:00,A-1027,Hadi Hidayat,withdrawal,382.00,atm,Jakarta,ID,,false,19964.46
 TXN-100149,2026-03-17T19:10:00+07:00,A-1046,Vina Wijaya,cash_deposit,1464.57,online,Bandung,ID,,false,32912.32
 TXN-100064,2026-03-17T20:40:00+07:00,A-1031,Hadi Saputra,withdrawal,169.98,mobile,Singapore,SG,,false,30128.99
+</script>
+<script id="embedded-bad-csv" type="text/plain">txn_id,ts,account_id,account_name,type,amount,channel,city,country,payee_id,payee_new,balance_after
+TXN-200001,2026-03-17T09:00:00+07:00,A-2001,Test User,cash_deposit,not_a_number,branch,Jakarta,ID,,false,1000.00
+TXN-200002,2026-03-17T10:00:00+07:00,A-2001,Test User,withdrawal,100.00,atm,Jakarta,ID,,false,900.00
 </script>
 <script>
 "use strict";
@@ -617,6 +622,17 @@ $("#queueTable").querySelectorAll("th").forEach(th=>th.onclick=()=>{
 document.querySelectorAll(".modal").forEach(m=>m.addEventListener("click",e=>{if(e.target===m)m.classList.remove("open");}));
 document.addEventListener("click",e=>{ if(e.target&&e.target.id==="copySar"){ navigator.clipboard.writeText(sarText(FLAGS.find(x=>x.id===SEL))).then(()=>toast("Narrative copied.")); }});
 // ---------- Boot ----------
+$("#dataset").onchange=e=>{
+  const v=e.target.value;
+  if(v==="badsample"){
+    try{ loadTransactions(parseCSV(document.getElementById("embedded-bad-csv").textContent),"malformed sample"); }
+    catch(err){ banner("error","Upload failed: "+err.message); }
+    e.target.value="builtin";
+    return;
+  }
+  try{ loadTransactions(parseCSV(document.getElementById("embedded-csv").textContent),"built-in dataset"); }
+  catch(err){ banner("error","Built-in dataset failed: "+err.message); }
+};
 try{ loadTransactions(parseCSV(document.getElementById("embedded-csv").textContent),"built-in dataset"); }
 catch(err){ banner("error","Built-in dataset failed: "+err.message); }
 </script>
