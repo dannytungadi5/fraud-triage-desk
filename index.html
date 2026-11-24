@@ -622,8 +622,10 @@ $("#queueTable").querySelectorAll("th").forEach(th=>th.onclick=()=>{
 document.querySelectorAll(".modal").forEach(m=>m.addEventListener("click",e=>{if(e.target===m)m.classList.remove("open");}));
 document.addEventListener("click",e=>{ if(e.target&&e.target.id==="copySar"){ navigator.clipboard.writeText(sarText(FLAGS.find(x=>x.id===SEL))).then(()=>toast("Narrative copied.")); }});
 // ---------- Boot ----------
-$("#dataset").onchange=e=>{
-  const v=e.target.value;
+let _dsLast=$("#dataset").value;
+function datasetChanged(){
+  const sel=$("#dataset"); const v=sel.value;
+  if(v===_dsLast) return; _dsLast=v;
   if(v==="badsample"){
     try{ loadTransactions(parseCSV(document.getElementById("embedded-bad-csv").textContent),"malformed sample"); }
     catch(err){ banner("error","Upload failed: "+err.message); }
@@ -631,7 +633,10 @@ $("#dataset").onchange=e=>{
   }
   try{ loadTransactions(parseCSV(document.getElementById("embedded-csv").textContent),"built-in dataset"); }
   catch(err){ banner("error","Built-in dataset failed: "+err.message); }
-};
+}
+$("#dataset").addEventListener("change",datasetChanged);
+$("#dataset").addEventListener("input",datasetChanged);
+setInterval(datasetChanged,400);
 try{ loadTransactions(parseCSV(document.getElementById("embedded-csv").textContent),"built-in dataset"); }
 catch(err){ banner("error","Built-in dataset failed: "+err.message); }
 </script>
