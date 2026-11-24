@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flagline - Fraud Triage Desk</title>
+<style>
+:root{
+  --bg:#0d1117; --panel:#151b24; --panel2:#1b232f; --line:#2a3442;
+  --text:#dbe4ee; --dim:#8b98a9; --accent:#f0b429; --red:#e5534b; --green:#57ab5a; --blue:#539bf5;
+}
+*{box-sizing:border-box; margin:0; padding:0}
+body{background:var(--bg); color:var(--text); font:14px/1.5 "Segoe UI",system-ui,sans-serif}
+header{display:flex; align-items:center; gap:16px; padding:12px 20px; background:var(--panel); border-bottom:1px solid var(--line); flex-wrap:wrap}
+.brand{font-size:18px; font-weight:700; letter-spacing:.5px}
+.brand span{color:var(--accent)}
+.brand small{display:block; font-size:11px; color:var(--dim); font-weight:400; letter-spacing:2px; text-transform:uppercase}
+.controls{margin-left:auto; display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+button{background:var(--panel2); color:var(--text); border:1px solid var(--line); border-radius:6px; padding:7px 12px; cursor:pointer; font-size:13px}
+button:hover{border-color:var(--accent)}
+button.primary{background:var(--accent); color:#111; border-color:var(--accent); font-weight:600}
+button.danger{color:var(--red)}
+button:disabled{opacity:.45; cursor:not-allowed}
+select,input[type=text],textarea{background:var(--panel2); color:var(--text); border:1px solid var(--line); border-radius:6px; padding:7px 10px; font-size:13px}
+.kpis{display:grid; grid-template-columns:repeat(6,1fr); gap:10px; padding:14px 20px}
+.kpi{background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:10px 14px}
+.kpi .v{font-size:22px; font-weight:700}
+.kpi .l{font-size:11px; color:var(--dim); text-transform:uppercase; letter-spacing:1px}
+.kpi.warn .v{color:var(--accent)} .kpi.bad .v{color:var(--red)} .kpi.good .v{color:var(--green)}
+main{display:grid; grid-template-columns:1.35fr 1fr; gap:14px; padding:0 20px 20px}
+.panel{background:var(--panel); border:1px solid var(--line); border-radius:8px; overflow:hidden}
+.panel h2{font-size:13px; text-transform:uppercase; letter-spacing:1px; color:var(--dim); padding:12px 16px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:10px}
+.panel h2 .count{background:var(--accent); color:#111; border-radius:10px; padding:0 8px; font-weight:700}
+table{width:100%; border-collapse:collapse; font-size:13px}
+th,td{padding:8px 12px; text-align:left; border-bottom:1px solid var(--line)}
+th{color:var(--dim); font-size:11px; text-transform:uppercase; letter-spacing:.5px; cursor:pointer; user-select:none}
+tbody tr{cursor:pointer}
+tbody tr:hover{background:var(--panel2)}
+tbody tr.sel{background:#223047}
+tbody tr.done{opacity:.5}
+.mono{font-family:ui-monospace,Consolas,monospace; font-size:12px}
+.chip{display:inline-block; padding:1px 8px; border-radius:10px; font-size:11px; font-weight:600}
+.chip.open{background:#3d2e0a; color:var(--accent)}
+.chip.confirmed{background:#4a1512; color:var(--red)}
+.chip.dismissed{background:#12261a; color:var(--green)}
+.chip.escalated{background:#12263a; color:var(--blue)}
+.score{font-weight:700}
+.detail{padding:16px}
+.detail h3{font-size:16px; margin-bottom:4px}
+.detail .sub{color:var(--dim); font-size:12px; margin-bottom:12px}
+.evidence{background:var(--panel2); border-left:3px solid var(--accent); padding:10px 12px; border-radius:0 6px 6px 0; margin:10px 0; font-size:13px}
+.txlist{max-height:180px; overflow:auto; margin:10px 0; border:1px solid var(--line); border-radius:6px}
+.actions{display:flex; gap:8px; margin:12px 0; flex-wrap:wrap}
+textarea{width:100%; min-height:56px; resize:vertical}
+.sar{background:#101820; border:1px solid var(--line); border-radius:6px; padding:12px; margin-top:12px; font-size:13px; white-space:pre-wrap}
+.sar h4{color:var(--accent); margin-bottom:6px}
+.empty{padding:40px; text-align:center; color:var(--dim)}
+#banner{display:none; padding:10px 20px; font-weight:600}
+#banner.error{display:block; background:#4a1512; color:#ffb4ae}
+#banner.ok{display:block; background:#12261a; color:#7ee2a0}
+#toast{position:fixed; bottom:20px; right:20px; background:var(--panel2); border:1px solid var(--accent); padding:10px 16px; border-radius:8px; display:none; z-index:50}
+.modal{position:fixed; inset:0; background:rgba(0,0,0,.6); display:none; align-items:center; justify-content:center; z-index:40}
+.modal.open{display:flex}
+.modal .box{background:var(--panel); border:1px solid var(--line); border-radius:10px; width:min(680px,92vw); max-height:84vh; overflow:auto; padding:18px}
+.modal pre{background:var(--panel2); padding:12px; border-radius:6px; overflow:auto; font-size:12px; max-height:50vh}
+.rules label{display:flex; align-items:center; gap:8px; padding:6px 0; font-size:13px}
+.rules input[type=number]{width:70px; background:var(--panel2); border:1px solid var(--line); color:var(--text); border-radius:4px; padding:3px 6px}
+footer{padding:10px 20px; color:var(--dim); font-size:12px; border-top:1px solid var(--line)}
+.bar-row{display:flex; align-items:center; gap:8px; margin:3px 0; font-size:12px}
+.bar{height:12px; border-radius:3px; background:var(--accent); min-width:2px}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">FLAG<span>LINE</span><small>fraud triage desk</small></div>
+  <div class="controls">
+    <select id="dataset" aria-label="Dataset">
+      <option value="builtin">Northbridge Mutual - March 2026 (built in)</option>
+    </select>
+    <button id="uploadBtn">Upload CSV</button>
+    <input type="file" id="fileInput" accept=".csv,text/csv" style="display:none">
+    <button id="rulesBtn">Rules</button>
+    <button id="exportBtn" class="primary">Export report</button>
+  </div>
+</header>
+<div id="banner" role="alert"></div>
+<section class="kpis" id="kpis"></section>
+<main>
+  <section class="panel">
+    <h2>Flag queue <span class="count" id="queueCount">0</span></h2>
+    <div style="max-height:70vh; overflow:auto">
+    <table id="queueTable" aria-label="Flag queue">
+      <thead><tr>
+        <th data-k="id">Case</th><th data-k="rule">Rule</th><th data-k="account">Account</th>
+        <th data-k="amount">Amount</th><th data-k="score">Score</th><th data-k="status">Status</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+    </div>
+  </section>
+  <section class="panel" id="detailPanel">
+    <h2>Case detail</h2>
+    <div class="detail" id="detail"><div class="empty">Select a case from the queue.</div></div>
+  </section>
+</main>
+<section class="panel" style="margin:0 20px 20px">
+  <h2>Flags by rule</h2>
+  <div class="detail" id="ruleChart"></div>
+</section>
+<div class="modal" id="rulesModal"><div class="box rules">
+  <h3 style="margin-bottom:10px">Detection rules</h3>
+  <div id="rulesForm"></div>
+  <div class="actions"><button id="rulesApply" class="primary">Apply and rescan</button><button id="rulesClose">Close</button></div>
+</div></div>
+<div class="modal" id="exportModal"><div class="box">
+  <h3 style="margin-bottom:10px">Case report</h3>
+  <p style="color:var(--dim);font-size:12px;margin-bottom:8px">JSON, ready to attach to a filing or handoff.</p>
+  <pre id="exportJson"></pre>
+  <div class="actions"><button id="downloadBtn" class="primary">Download JSON</button><button id="exportClose">Close</button></div>
+</div></div>
+<div id="toast" role="status"></div>
+<footer>Flagline - built by an AI coding agent, verified by Kane CLI. Sample data is synthetic.</footer>
+<script id="embedded-csv" type="text/plain">txn_id,ts,account_id,account_name,type,amount,channel,city,country,payee_id,payee_new,balance_after
+TXN-100167,2025-09-12T10:15:00+07:00,A-1091,H. Gunawan,card_payment,85.40,online,Jakarta,ID,P-411,false,52000.00
+TXN-100061,2026-03-01T10:59:00+07:00,A-1031,Hadi Saputra,card_payment,2636.16,atm,Singapore,SG,P-735,false,37381.43
+TXN-100033,2026-03-01T11:56:00+07:00,A-1025,Nanda Pratama,transfer_in,17.60,branch,Jakarta,ID,,false,19723.81
+TXN-100063,2026-03-01T15:12:00+07:00,A-1031,Hadi Saputra,card_payment,2577.58,online,Singapore,SG,P-354,false,32706.57
+TXN-100048,2026-03-01T17:16:00+07:00,A-1028,Citra Salim,card_payment,1467.98,mobile,Jakarta,ID,P-849,false,23949.08
+TXN-100084,2026-03-01T19:19:00+07:00,A-1035,Kirana Wijaya,card_payment,451.25,branch,Bandung,ID,P-763,false,30334.22
+TXN-100045,2026-03-01T20:27:00+07:00,A-1027,Hadi Hidayat,withdrawal,1082.76,atm,Jakarta,ID,,false,17679.65
+TXN-100078,2026-03-02T07:31:00+07:00,A-1034,Qori Salim,transfer_out,46.73,online,Jakarta,ID,P-518,false,41944.43
+TXN-100071,2026-03-02T08:24:00+07:00,A-1033,Gita Halim,transfer_out,1579.56,branch,Jakarta,ID,P-375,false,3463.94
+TXN-100094,2026-03-02T11:34:00+07:00,A-1037,Lukman Wijaya,transfer_in,1909.49,online,Singapore,SG,,false,22590.32
+TXN-100035,2026-03-02T13:18:00+07:00,A-1025,Nanda Pratama,card_payment,888.11,atm,Jakarta,ID,P-378,false,17106.92
+TXN-100092,2026-03-02T13:38:00+07:00,A-1037,Lukman Wijaya,cash_deposit,1908.18,online,Singapore,SG,,false,19528.99
+TXN-100093,2026-03-02T13:39:00+07:00,A-1037,Lukman Wijaya,transfer_in,1153.15,branch,Singapore,SG,,false,21437.17
+TXN-100156,2026-03-02T16:02:00+07:00,A-1047,Budi Nugroho,card_payment,1947.08,branch,Surabaya,ID,P-749,false,37607.08
+TXN-100130,2026-03-02T16:31:00+07:00,A-1043,Sari Kusuma,transfer_out,1343.89,atm,Jakarta,ID,P-944,false,20826.76
+TXN-100049,2026-03-02T20:48:00+07:00,A-1028,Citra Salim,withdrawal,1006.94,atm,Jakarta,ID,,false,22481.10
+TXN-100003,2026-03-03T07:33:00+07:00,A-1020,Wahyu Gunawan,transfer_in,2202.95,atm,Jakarta,ID,,false,31346.36
+TXN-100139,2026-03-03T07:53:00+07:00,A-1044,Dewi Salim,card_payment,1309.23,mobile,Medan,ID,P-881,false,11145.03
+TXN-100153,2026-03-03T08:39:00+07:00,A-1047,Budi Nugroho,transfer_in,2243.62,online,Surabaya,ID,,false,33678.66
+TXN-100073,2026-03-03T11:46:00+07:00,A-1033,Gita Halim,withdrawal,2045.18,online,Jakarta,ID,,false,-958.69
+TXN-100133,2026-03-03T12:34:00+07:00,A-1043,Sari Kusuma,transfer_out,1831.94,online,Jakarta,ID,P-541,false,20734.40
+TXN-100066,2026-03-03T13:56:00+07:00,A-1032,Putri Wibowo,cash_deposit,2262.52,atm,Bandung,ID,,false,33017.31
+TXN-100018,2026-03-03T14:05:00+07:00,A-1022,Putri Saputra,withdrawal,55.80,branch,Jakarta,ID,,false,16575.26
+TXN-100074,2026-03-03T15:44:00+07:00,A-1033,Gita Halim,card_payment,2621.05,atm,Jakarta,ID,P-680,false,-3003.87
+TXN-100138,2026-03-03T17:54:00+07:00,A-1044,Dewi Salim,withdrawal,1347.29,atm,Medan,ID,,false,12492.32
+TXN-100135,2026-03-03T18:13:00+07:00,A-1043,Sari Kusuma,withdrawal,2079.45,mobile,Jakarta,ID,,false,16428.28
+TXN-100009,2026-03-03T19:57:00+07:00,A-1021,Dewi Nugroho,card_payment,1590.68,branch,Jakarta,ID,P-441,false,30789.71
+TXN-100067,2026-03-04T09:37:00+07:00,A-1032,Putri Wibowo,card_payment,1640.11,branch,Bandung,ID,P-827,false,35279.83
+TXN-100119,2026-03-04T09:53:00+07:00,A-1041,Qori Santoso,card_payment,1511.24,online,Jakarta,ID,P-743,false,21936.19
+TXN-100124,2026-03-04T10:07:00+07:00,A-1042,Eka Saputra,transfer_out,1270.19,branch,Bandung,ID,P-829,false,32937.49
+TXN-100034,2026-03-04T11:06:00+07:00,A-1025,Nanda Pratama,transfer_out,2634.49,branch,Jakarta,ID,P-914,false,19741.41
+TXN-100131,2026-03-04T12:50:00+07:00,A-1043,Sari Kusuma,card_payment,1013.88,branch,Jakarta,ID,P-720,false,19482.87
+TXN-100137,2026-03-04T13:22:00+07:00,A-1044,Dewi Salim,cash_deposit,2903.69,online,Medan,ID,,false,9588.63
+TXN-100114,2026-03-04T13:57:00+07:00,A-1040,Qori Pratama,transfer_out,2330.95,mobile,Jakarta,ID,P-567,false,13720.49
+TXN-100099,2026-03-04T14:00:00+07:00,A-1038,Hadi Gunawan,transfer_in,2630.69,mobile,Jakarta,ID,,false,17465.80
+TXN-100142,2026-03-04T14:13:00+07:00,A-1045,Sari Saputra,cash_deposit,1722.30,branch,Bandung,ID,,false,19578.28
+TXN-100152,2026-03-04T17:17:00+07:00,A-1046,Vina Wijaya,withdrawal,1145.84,atm,Bandung,ID,,false,35612.67
+TXN-100122,2026-03-04T17:41:00+07:00,A-1042,Eka Saputra,transfer_in,2775.55,mobile,Bandung,ID,,false,30473.46
+TXN-100070,2026-03-04T18:55:00+07:00,A-1033,Gita Halim,transfer_in,393.52,atm,Jakarta,ID,,false,3070.42
+TXN-100101,2026-03-04T19:42:00+07:00,A-1038,Hadi Gunawan,withdrawal,1228.55,mobile,Jakarta,ID,,false,20040.56
+TXN-100036,2026-03-05T07:21:00+07:00,A-1025,Nanda Pratama,transfer_out,2711.78,mobile,Jakarta,ID,P-743,false,16218.81
+TXN-100025,2026-03-05T11:56:00+07:00,A-1024,Xena Rahman,transfer_out,2242.86,mobile,Bandung,ID,P-344,false,12959.42
+TXN-100040,2026-03-05T13:12:00+07:00,A-1026,Wahyu Nugroho,withdrawal,121.38,online,Singapore,SG,,false,10588.89
+TXN-100126,2026-03-05T13:26:00+07:00,A-1042,Eka Saputra,cash_deposit,2423.00,online,Bandung,ID,,false,31427.60
+TXN-100068,2026-03-05T13:40:00+07:00,A-1032,Putri Wibowo,withdrawal,1239.01,branch,Bandung,ID,,false,33639.72
+TXN-100017,2026-03-05T15:35:00+07:00,A-1022,Putri Saputra,card_payment,569.77,atm,Jakarta,ID,P-760,false,17145.03
+TXN-100117,2026-03-05T18:06:00+07:00,A-1041,Qori Santoso,transfer_out,191.83,mobile,Jakarta,ID,P-988,false,23705.65
+TXN-100024,2026-03-05T18:27:00+07:00,A-1024,Xena Rahman,cash_deposit,1879.41,atm,Bandung,ID,,false,11080.01
+TXN-100123,2026-03-05T19:47:00+07:00,A-1042,Eka Saputra,withdrawal,311.52,atm,Bandung,ID,,false,33249.01
+TXN-100113,2026-03-06T09:41:00+07:00,A-1040,Qori Pratama,transfer_in,1882.51,atm,Jakarta,ID,,false,11837.98
+TXN-100145,2026-03-06T10:11:00+07:00,A-1045,Sari Saputra,withdrawal,1614.33,mobile,Bandung,ID,,false,18661.08
+TXN-100148,2026-03-06T12:02:00+07:00,A-1046,Vina Wijaya,withdrawal,682.54,online,Bandung,ID,,false,33594.86
+TXN-100134,2026-03-06T12:04:00+07:00,A-1043,Sari Kusuma,card_payment,2474.18,branch,Jakarta,ID,P-982,false,18902.46
+TXN-100039,2026-03-06T15:41:00+07:00,A-1026,Wahyu Nugroho,transfer_out,1594.55,atm,Singapore,SG,P-963,false,12183.44
+TXN-100023,2026-03-06T16:13:00+07:00,A-1023,Lukman Rahman,withdrawal,1322.78,atm,Singapore,SG,,false,27925.32
+TXN-100144,2026-03-06T17:36:00+07:00,A-1045,Sari Saputra,card_payment,1881.52,online,Bandung,ID,P-750,false,20542.60
+TXN-100132,2026-03-06T18:34:00+07:00,A-1043,Sari Kusuma,transfer_in,2265.41,atm,Jakarta,ID,,false,18468.99
+TXN-100050,2026-03-07T08:27:00+07:00,A-1029,Wahyu Wijaya,transfer_out,2518.08,branch,Medan,ID,P-603,false,23819.37
+TXN-100151,2026-03-07T10:04:00+07:00,A-1046,Vina Wijaya,card_payment,1145.95,mobile,Bandung,ID,P-876,false,36758.62
+TXN-100103,2026-03-07T10:26:00+07:00,A-1039,Wahyu Wijaya,withdrawal,1631.72,mobile,Medan,ID,,false,31645.67
+TXN-100081,2026-03-07T12:38:00+07:00,A-1035,Kirana Wijaya,withdrawal,937.15,mobile,Bandung,ID,,false,30739.13
+TXN-100004,2026-03-07T15:50:00+07:00,A-1020,Wahyu Gunawan,cash_deposit,1635.87,atm,Jakarta,ID,,false,33549.31
+TXN-100031,2026-03-07T18:20:00+07:00,A-1025,Nanda Pratama,transfer_out,796.95,mobile,Jakarta,ID,P-792,false,18672.28
+TXN-100038,2026-03-07T19:34:00+07:00,A-1026,Wahyu Nugroho,transfer_out,1549.13,branch,Singapore,SG,P-544,false,13732.57
+TXN-100032,2026-03-07T19:48:00+07:00,A-1025,Nanda Pratama,cash_deposit,1848.48,atm,Jakarta,ID,,false,17875.33
+TXN-100041,2026-03-08T09:56:00+07:00,A-1027,Hadi Hidayat,transfer_out,1170.20,atm,Jakarta,ID,P-946,false,21134.66
+TXN-100107,2026-03-08T13:00:00+07:00,A-1039,Wahyu Wijaya,cash_deposit,575.84,online,Medan,ID,,false,29160.39
+TXN-100116,2026-03-08T13:59:00+07:00,A-1041,Qori Santoso,cash_deposit,2677.21,atm,Jakarta,ID,,false,21028.44
+TXN-100002,2026-03-08T16:07:00+07:00,A-1020,Wahyu Gunawan,transfer_out,2234.13,online,Jakarta,ID,P-476,false,33580.49
+TXN-100026,2026-03-08T18:22:00+07:00,A-1024,Xena Rahman,withdrawal,630.23,branch,Bandung,ID,,false,10716.56
+TXN-100020,2026-03-08T18:24:00+07:00,A-1022,Putri Saputra,cash_deposit,2528.91,mobile,Jakarta,ID,,false,15134.06
+TXN-100085,2026-03-08T20:38:00+07:00,A-1035,Kirana Wijaya,transfer_out,629.90,atm,Bandung,ID,P-861,false,29882.97
+TXN-100012,2026-03-09T08:02:00+07:00,A-1021,Dewi Nugroho,transfer_in,2850.13,mobile,Jakarta,ID,,false,26413.82
+TXN-100030,2026-03-09T16:15:00+07:00,A-1025,Nanda Pratama,card_payment,1501.97,branch,Jakarta,ID,P-830,false,20174.25
+TXN-100053,2026-03-09T18:54:00+07:00,A-1029,Wahyu Wijaya,transfer_in,1188.58,mobile,Medan,ID,,false,19146.66
+TXN-100001,2026-03-09T20:51:00+07:00,A-1020,Wahyu Gunawan,transfer_in,381.27,mobile,Jakarta,ID,,false,33199.22
+TXN-100046,2026-03-10T07:25:00+07:00,A-1027,Hadi Hidayat,withdrawal,334.82,atm,Jakarta,ID,,false,16596.89
+TXN-100157,2026-03-10T09:00:00+07:00,A-1042,R. Wibowo,cash_deposit,9450.00,branch,Jakarta,ID,,false,40000.00
+TXN-100155,2026-03-10T09:28:00+07:00,A-1047,Budi Nugroho,card_payment,305.37,atm,Surabaya,ID,P-824,false,37912.45
+TXN-100062,2026-03-10T10:38:00+07:00,A-1031,Hadi Saputra,withdrawal,2038.70,online,Singapore,SG,,false,34745.27
+TXN-100007,2026-03-10T13:14:00+07:00,A-1020,Wahyu Gunawan,card_payment,2426.10,mobile,Jakarta,ID,P-958,false,32939.55
+TXN-100120,2026-03-10T14:09:00+07:00,A-1041,Qori Santoso,card_payment,928.12,atm,Jakarta,ID,P-320,false,20424.95
+TXN-100013,2026-03-10T15:17:00+07:00,A-1021,Dewi Nugroho,transfer_out,2062.32,mobile,Jakarta,ID,P-387,false,29263.95
+TXN-100054,2026-03-10T15:28:00+07:00,A-1030,Qori Wibowo,card_payment,1532.93,online,Jakarta,ID,P-672,false,3129.17
+TXN-100052,2026-03-10T15:50:00+07:00,A-1029,Wahyu Wijaya,card_payment,1097.05,mobile,Medan,ID,P-436,false,20243.71
+TXN-100088,2026-03-10T16:32:00+07:00,A-1036,Oscar Hidayat,cash_deposit,1447.80,branch,Jakarta,ID,,false,30823.00
+TXN-100095,2026-03-10T16:58:00+07:00,A-1037,Lukman Wijaya,withdrawal,1829.67,online,Singapore,SG,,false,24499.81
+TXN-100015,2026-03-10T18:06:00+07:00,A-1022,Putri Saputra,transfer_out,1743.71,online,Jakarta,ID,P-554,false,20516.07
+TXN-100027,2026-03-10T18:13:00+07:00,A-1024,Xena Rahman,transfer_in,2243.02,online,Bandung,ID,,false,10086.33
+TXN-100008,2026-03-10T19:57:00+07:00,A-1020,Wahyu Gunawan,card_payment,1097.74,mobile,Jakarta,ID,P-605,false,30513.45
+TXN-100108,2026-03-10T20:49:00+07:00,A-1040,Qori Pratama,transfer_in,523.75,atm,Jakarta,ID,,false,7536.29
+TXN-100090,2026-03-11T07:44:00+07:00,A-1036,Oscar Hidayat,card_payment,1327.47,branch,Jakarta,ID,P-926,false,35219.65
+TXN-100098,2026-03-11T10:08:00+07:00,A-1038,Hadi Gunawan,transfer_in,2902.63,atm,Jakarta,ID,,false,14563.17
+TXN-100158,2026-03-11T13:00:00+07:00,A-1042,R. Wibowo,cash_deposit,9780.00,branch,Jakarta,ID,,false,49500.00
+TXN-100089,2026-03-11T15:48:00+07:00,A-1036,Oscar Hidayat,transfer_in,2948.85,atm,Jakarta,ID,,false,32270.80
+TXN-100159,2026-03-11T16:00:00+07:00,A-1042,R. Wibowo,cash_deposit,9520.00,branch,Jakarta,ID,,false,59000.00
+TXN-100115,2026-03-11T19:50:00+07:00,A-1040,Qori Pratama,transfer_in,2988.56,mobile,Jakarta,ID,,false,11389.54
+TXN-100160,2026-03-12T10:00:00+07:00,A-1042,R. Wibowo,cash_deposit,9890.00,branch,Jakarta,ID,,false,68500.00
+TXN-100111,2026-03-12T10:21:00+07:00,A-1040,Qori Pratama,transfer_in,2536.64,mobile,Jakarta,ID,,false,11516.83
+TXN-100060,2026-03-12T12:19:00+07:00,A-1030,Qori Wibowo,card_payment,2053.08,mobile,Jakarta,ID,P-411,false,-4381.16
+TXN-100011,2026-03-12T12:55:00+07:00,A-1021,Dewi Nugroho,transfer_out,2200.35,mobile,Jakarta,ID,P-929,false,28614.17
+TXN-100096,2026-03-12T13:08:00+07:00,A-1037,Lukman Wijaya,transfer_in,2784.03,online,Singapore,SG,,false,22670.14
+TXN-100097,2026-03-12T14:56:00+07:00,A-1038,Hadi Gunawan,card_payment,341.96,mobile,Jakarta,ID,P-799,false,14905.13
+TXN-100118,2026-03-12T16:22:00+07:00,A-1041,Qori Santoso,transfer_out,1577.63,atm,Jakarta,ID,P-361,false,23513.82
+TXN-100055,2026-03-12T16:56:00+07:00,A-1030,Qori Wibowo,transfer_in,920.40,online,Jakarta,ID,,false,1596.24
+TXN-100086,2026-03-12T17:04:00+07:00,A-1036,Oscar Hidayat,card_payment,2195.07,atm,Jakarta,ID,P-672,false,35813.01
+TXN-100043,2026-03-12T17:28:00+07:00,A-1027,Hadi Hidayat,transfer_in,860.24,branch,Jakarta,ID,,false,19582.46
+TXN-100171,2026-03-13T09:10:00+07:00,A-1063,T. Rahman,card_payment,220.00,online,Jakarta,ID,P-520,false,8000.00
+TXN-100172,2026-03-13T10:25:00+07:00,A-1063,T. Rahman,withdrawal,3500.00,atm,Singapore,SG,,false,4500.00
+TXN-100109,2026-03-13T14:39:00+07:00,A-1040,Qori Pratama,cash_deposit,2570.49,atm,Jakarta,ID,,false,8060.04
+TXN-100127,2026-03-13T14:57:00+07:00,A-1042,Eka Saputra,cash_deposit,2906.94,mobile,Bandung,ID,,false,33850.60
+TXN-100080,2026-03-13T19:39:00+07:00,A-1035,Kirana Wijaya,transfer_out,2328.16,online,Bandung,ID,P-334,false,33067.29
+TXN-100014,2026-03-14T07:05:00+07:00,A-1021,Dewi Nugroho,cash_deposit,2718.48,mobile,Jakarta,ID,,false,27201.63
+TXN-100058,2026-03-14T07:38:00+07:00,A-1030,Qori Wibowo,withdrawal,2589.88,atm,Jakarta,ID,,false,-3192.44
+TXN-100029,2026-03-14T08:26:00+07:00,A-1025,Nanda Pratama,card_payment,1704.88,online,Jakarta,ID,P-452,false,21879.13
+TXN-100128,2026-03-14T09:17:00+07:00,A-1042,Eka Saputra,card_payment,1704.48,atm,Bandung,ID,P-611,false,36757.54
+TXN-100154,2026-03-14T11:13:00+07:00,A-1047,Budi Nugroho,cash_deposit,1990.17,branch,Surabaya,ID,,false,35922.28
+TXN-100028,2026-03-14T11:34:00+07:00,A-1024,Xena Rahman,transfer_in,922.95,mobile,Bandung,ID,,false,12329.35
+TXN-100146,2026-03-14T12:37:00+07:00,A-1045,Sari Saputra,cash_deposit,1199.50,atm,Bandung,ID,,false,17046.75
+TXN-100022,2026-03-14T14:01:00+07:00,A-1023,Lukman Rahman,transfer_out,1127.23,branch,Singapore,SG,P-928,false,29052.55
+TXN-100037,2026-03-14T14:06:00+07:00,A-1026,Wahyu Nugroho,transfer_out,263.40,online,Singapore,SG,P-929,false,13995.97
+TXN-100019,2026-03-14T14:10:00+07:00,A-1022,Putri Saputra,transfer_out,1385.40,mobile,Jakarta,ID,P-353,false,16519.46
+TXN-100056,2026-03-14T14:13:00+07:00,A-1030,Qori Wibowo,withdrawal,2772.17,branch,Jakarta,ID,,false,2516.64
+TXN-100110,2026-03-14T14:43:00+07:00,A-1040,Qori Pratama,transfer_in,886.30,atm,Jakarta,ID,,false,10630.53
+TXN-100072,2026-03-14T14:48:00+07:00,A-1033,Gita Halim,withdrawal,2843.07,online,Jakarta,ID,,false,1884.38
+TXN-100129,2026-03-14T16:19:00+07:00,A-1042,Eka Saputra,transfer_in,2291.45,branch,Bandung,ID,,false,35053.06
+TXN-100082,2026-03-14T18:09:00+07:00,A-1035,Kirana Wijaya,transfer_in,2674.62,mobile,Bandung,ID,,false,29801.98
+TXN-100147,2026-03-14T19:04:00+07:00,A-1046,Vina Wijaya,transfer_in,2578.29,online,Bandung,ID,,false,31016.57
+TXN-100161,2026-03-14T21:05:00+07:00,A-1077,M. Chen,transfer_out,1222.94,mobile,Singapore,SG,P-810,true,15000.00
+TXN-100162,2026-03-14T21:13:00+07:00,A-1077,M. Chen,transfer_out,918.99,mobile,Singapore,SG,P-811,true,14100.00
+TXN-100163,2026-03-14T21:21:00+07:00,A-1077,M. Chen,transfer_out,1539.65,mobile,Singapore,SG,P-812,true,13200.00
+TXN-100164,2026-03-14T21:29:00+07:00,A-1077,M. Chen,transfer_out,738.07,mobile,Singapore,SG,P-813,true,12300.00
+TXN-100165,2026-03-14T21:37:00+07:00,A-1077,M. Chen,transfer_out,1458.68,mobile,Singapore,SG,P-814,true,11400.00
+TXN-100166,2026-03-14T21:45:00+07:00,A-1077,M. Chen,transfer_out,1695.91,mobile,Singapore,SG,P-815,true,10500.00
+TXN-100106,2026-03-15T07:47:00+07:00,A-1039,Wahyu Wijaya,transfer_in,633.96,branch,Medan,ID,,false,28526.43
+TXN-100021,2026-03-15T10:18:00+07:00,A-1023,Lukman Rahman,transfer_out,1457.47,branch,Singapore,SG,P-953,false,30510.02
+TXN-100168,2026-03-15T11:02:00+07:00,A-1091,H. Gunawan,withdrawal,48000.00,branch,Jakarta,ID,,false,4000.00
+TXN-100102,2026-03-15T14:09:00+07:00,A-1039,Wahyu Wijaya,withdrawal,1672.20,online,Medan,ID,,false,33317.87
+TXN-100077,2026-03-15T15:06:00+07:00,A-1034,Qori Salim,transfer_in,603.86,branch,Jakarta,ID,,false,41340.57
+TXN-100044,2026-03-15T15:17:00+07:00,A-1027,Hadi Hidayat,card_payment,2763.05,online,Jakarta,ID,P-336,false,20442.70
+TXN-100069,2026-03-15T15:36:00+07:00,A-1032,Putri Wibowo,card_payment,317.16,branch,Bandung,ID,P-995,false,32400.71
+TXN-100047,2026-03-15T15:56:00+07:00,A-1028,Citra Salim,withdrawal,1760.58,online,Jakarta,ID,,false,25709.66
+TXN-100051,2026-03-15T16:09:00+07:00,A-1029,Wahyu Wijaya,withdrawal,1057.58,branch,Medan,ID,,false,21301.29
+TXN-100112,2026-03-15T16:28:00+07:00,A-1040,Qori Pratama,withdrawal,2215.49,online,Jakarta,ID,,false,14053.47
+TXN-100091,2026-03-15T16:32:00+07:00,A-1037,Lukman Wijaya,cash_deposit,2810.72,branch,Singapore,SG,,false,16718.27
+TXN-100005,2026-03-15T20:22:00+07:00,A-1020,Wahyu Gunawan,withdrawal,2965.52,atm,Jakarta,ID,,false,35185.18
+TXN-100087,2026-03-15T20:45:00+07:00,A-1036,Oscar Hidayat,transfer_out,2794.94,mobile,Jakarta,ID,P-555,false,33617.94
+TXN-100125,2026-03-16T07:19:00+07:00,A-1042,Eka Saputra,withdrawal,239.70,branch,Bandung,ID,,false,31667.30
+TXN-100059,2026-03-16T07:27:00+07:00,A-1030,Qori Wibowo,transfer_in,1401.16,mobile,Jakarta,ID,,false,-5782.32
+TXN-100150,2026-03-16T08:09:00+07:00,A-1046,Vina Wijaya,transfer_in,2381.73,online,Bandung,ID,,false,34376.89
+TXN-100057,2026-03-16T10:12:00+07:00,A-1030,Qori Wibowo,withdrawal,2936.91,mobile,Jakarta,ID,,false,-255.53
+TXN-100006,2026-03-16T11:51:00+07:00,A-1020,Wahyu Gunawan,cash_deposit,719.89,atm,Jakarta,ID,,false,32219.66
+TXN-100075,2026-03-16T12:18:00+07:00,A-1034,Qori Salim,transfer_in,2346.61,mobile,Jakarta,ID,,false,37004.40
+TXN-100169,2026-03-16T14:22:00+07:00,A-1055,K. Lestari,transfer_out,25000.00,online,Jakarta,ID,P-999,true,31000.00
+TXN-100170,2026-03-16T14:40:00+07:00,A-1055,K. Lestari,transfer_out,12000.00,online,Jakarta,ID,P-999,false,19000.00
+TXN-100140,2026-03-16T16:20:00+07:00,A-1045,Sari Saputra,cash_deposit,695.99,mobile,Bandung,ID,,false,21531.43
+TXN-100141,2026-03-16T18:44:00+07:00,A-1045,Sari Saputra,withdrawal,2649.14,mobile,Bandung,ID,,false,22227.42
+TXN-100065,2026-03-16T19:42:00+07:00,A-1032,Putri Wibowo,transfer_out,200.07,mobile,Bandung,ID,P-478,false,33217.38
+TXN-100104,2026-03-17T07:03:00+07:00,A-1039,Wahyu Wijaya,card_payment,2212.88,atm,Medan,ID,P-775,false,30013.95
+TXN-100076,2026-03-17T07:07:00+07:00,A-1034,Qori Salim,cash_deposit,1989.56,online,Jakarta,ID,,false,39351.01
+TXN-100143,2026-03-17T08:32:00+07:00,A-1045,Sari Saputra,card_payment,757.98,atm,Bandung,ID,P-692,false,21300.58
+TXN-100010,2026-03-17T08:40:00+07:00,A-1021,Dewi Nugroho,transfer_out,584.86,branch,Jakarta,ID,P-747,false,29199.03
+TXN-100079,2026-03-17T09:44:00+07:00,A-1034,Qori Salim,transfer_out,2482.49,online,Jakarta,ID,P-971,false,41897.70
+TXN-100100,2026-03-17T10:35:00+07:00,A-1038,Hadi Gunawan,withdrawal,55.93,branch,Jakarta,ID,,false,20096.49
+TXN-100105,2026-03-17T11:52:00+07:00,A-1039,Wahyu Wijaya,cash_deposit,725.36,atm,Medan,ID,,false,27801.07
+TXN-100136,2026-03-17T13:24:00+07:00,A-1044,Dewi Salim,withdrawal,1308.68,online,Medan,ID,,false,10897.31
+TXN-100083,2026-03-17T13:36:00+07:00,A-1035,Kirana Wijaya,transfer_out,2142.38,mobile,Bandung,ID,P-740,false,32476.60
+TXN-100121,2026-03-17T16:22:00+07:00,A-1041,Qori Santoso,cash_deposit,2168.05,branch,Jakarta,ID,,false,19496.83
+TXN-100016,2026-03-17T17:59:00+07:00,A-1022,Putri Saputra,transfer_out,1627.33,branch,Jakarta,ID,P-406,false,18772.36
+TXN-100042,2026-03-17T18:17:00+07:00,A-1027,Hadi Hidayat,withdrawal,382.00,atm,Jakarta,ID,,false,19964.46
+TXN-100149,2026-03-17T19:10:00+07:00,A-1046,Vina Wijaya,cash_deposit,1464.57,online,Bandung,ID,,false,32912.32
+TXN-100064,2026-03-17T20:40:00+07:00,A-1031,Hadi Saputra,withdrawal,169.98,mobile,Singapore,SG,,false,30128.99
+</script>
+<script>
+"use strict";
+// ---------- CSV parsing ----------
+function parseCSV(text){
+  if(typeof text!=="string" || !text.trim()) throw new Error("empty file");
+  const rows=[]; let row=[],cell="",q=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(q){ if(c==='"'){ if(text[i+1]==='"'){cell+='"';i++;} else q=false; } else cell+=c; }
+    else if(c==='"') q=true;
+    else if(c===','){ row.push(cell); cell=""; }
+    else if(c==='\n'||c==='\r'){ if(c==='\r'&&text[i+1]==='\n') i++; row.push(cell); cell=""; if(row.length>1||row[0]!=="") rows.push(row); row=[]; }
+    else cell+=c;
+  }
+  if(cell!==""||row.length){ row.push(cell); rows.push(row); }
+  if(rows.length<2) throw new Error("no data rows found");
+  const head=rows[0].map(h=>h.trim());
+  const need=["txn_id","ts","account_id","account_name","type","amount","channel","city","country","payee_id","payee_new","balance_after"];
+  const missing=need.filter(c=>!head.includes(c));
+  if(missing.length) throw new Error("missing columns: "+missing.join(", "));
+  const out=[];
+  for(let r=1;r<rows.length;r++){
+    const o={}; head.forEach((h,i)=>o[h]=(rows[r][i]||"").trim());
+    const amt=Number(o.amount);
+    if(!o.txn_id) throw new Error("row "+(r+1)+": missing txn_id");
+    if(!Number.isFinite(amt)) throw new Error("row "+(r+1)+": bad amount '"+o.amount+"'");
+    const t=Date.parse(o.ts);
+    if(Number.isNaN(t)) throw new Error("row "+(r+1)+": bad timestamp '"+o.ts+"'");
+    o.amount=amt; o._t=t; o.payee_new=/^true$/i.test(o.payee_new);
+    out.push(o);
+  }
+  return out;
+}
+// ---------- Rules engine ----------
+const RULES=[
+ {id:"STRUCT-01",name:"Sub-threshold structuring",desc:"3+ cash deposits of $9,000-$9,999 within 72h",on:true,p:{minCount:3,lo:9000,hi:9999,hours:72},weight:40},
+ {id:"VELOC-02",name:"Transaction velocity burst",desc:"5+ transactions within 60 minutes",on:true,p:{minCount:5,minutes:60},weight:25},
+ {id:"DORM-03",name:"Dormant account bust-out",desc:"180+ days quiet, then a withdrawal of $10,000+",on:true,p:{days:180,minAmt:10000},weight:35},
+ {id:"ROUND-04",name:"Round amount to new payee",desc:"Transfer of $10,000+ in a round figure to a first-time payee",on:true,p:{minAmt:10000},weight:20},
+ {id:"GEO-05",name:"Impossible travel",desc:"Same account used in two cities within 90 minutes",on:true,p:{minutes:90},weight:30},
+];
+function scan(txns){
+  const flags=[];
+  const byAcct={};
+  txns.forEach(t=>{(byAcct[t.account_id]=byAcct[t.account_id]||[]).push(t);});
+  Object.values(byAcct).forEach(list=>list.sort((a,b)=>a._t-b._t));
+  const R=Object.fromEntries(RULES.map(r=>[r.id,r]));
+  if(R["STRUCT-01"].on){
+    const p=R["STRUCT-01"].p;
+    for(const [acct,list] of Object.entries(byAcct)){
+      const cash=list.filter(t=>t.type==="cash_deposit"&&t.amount>=p.lo&&t.amount<=p.hi);
+      for(let i=0;i<cash.length;i++){
+        const win=cash.filter(t=>t._t>=cash[i]._t&&t._t<=cash[i]._t+p.hours*3600e3);
+        if(win.length>=p.minCount){ flags.push(mkFlag("STRUCT-01",acct,win)); break; }
+      }
+    }
+  }
+  if(R["VELOC-02"].on){
+    const p=R["VELOC-02"].p;
+    for(const [acct,list] of Object.entries(byAcct)){
+      for(let i=0;i<list.length;i++){
+        const win=list.filter(t=>t._t>=list[i]._t&&t._t<=list[i]._t+p.minutes*60e3);
+        if(win.length>=p.minCount){ flags.push(mkFlag("VELOC-02",acct,win)); break; }
+      }
+    }
+  }
+  if(R["DORM-03"].on){
+    const p=R["DORM-03"].p;
+    for(const [acct,list] of Object.entries(byAcct)){
+      for(let i=1;i<list.length;i++){
+        const gap=(list[i]._t-list[i-1]._t)/86400e3;
+        if(gap>=p.days&&list[i].type==="withdrawal"&&list[i].amount>=p.minAmt){ flags.push(mkFlag("DORM-03",acct,[list[i-1],list[i]])); break; }
+      }
+    }
+  }
+  if(R["ROUND-04"].on){
+    const p=R["ROUND-04"].p;
+    for(const [acct,list] of Object.entries(byAcct)){
+      const hit=list.filter(t=>t.type==="transfer_out"&&t.amount>=p.minAmt&&t.amount%1000===0&&t.payee_new);
+      if(hit.length) flags.push(mkFlag("ROUND-04",acct,hit));
+    }
+  }
+  if(R["GEO-05"].on){
+    const p=R["GEO-05"].p;
+    for(const [acct,list] of Object.entries(byAcct)){
+      let done=false;
+      for(let i=0;i<list.length&&!done;i++) for(let j=i+1;j<list.length&&!done;j++){
+        const dt=(list[j]._t-list[i]._t)/60e3;
+        if(dt>p.minutes) break;
+        if(list[i].city!==list[j].city){ flags.push(mkFlag("GEO-05",acct,[list[i],list[j]])); done=true; }
+      }
+    }
+  }
+  flags.sort((a,b)=>b.score-a.score);
+  flags.forEach((f,i)=>f.id="FLAG-"+String(i+1).padStart(4,"0"));
+  return flags;
+}
+function mkFlag(ruleId,acct,txns){
+  const rule=RULES.find(r=>r.id===ruleId);
+  const amount=txns.reduce((s,t)=>s+t.amount,0);
+  const score=Math.min(99,rule.weight+Math.round(txns.length*4)+Math.round(amount/5000));
+  return {id:"",rule:ruleId,ruleName:rule.name,account:acct,accountName:txns[0].account_name,
+    txns,amount,score,status:"open",note:"",weight:rule.weight};
+}
+// ---------- State ----------
+let TXNS=[],FLAGS=[],SEL=null,SORT={k:"score",dir:-1};
+// ---------- Render ----------
+const $=s=>document.querySelector(s);
+const money=n=>"$"+n.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+function renderKPIs(){
+  const open=FLAGS.filter(f=>f.status==="open");
+  const conf=FLAGS.filter(f=>f.status==="confirmed");
+  const dism=FLAGS.filter(f=>f.status==="dismissed");
+  const rate=(conf.length+dism.length)?Math.round(100*conf.length/(conf.length+dism.length))+"%":"-";
+  $("#kpis").innerHTML=[
+    [TXNS.length,"transactions",""],[FLAGS.length,"flags raised",FLAGS.length?"warn":""],
+    [open.length,"open cases",open.length?"warn":"good"],[conf.length,"confirmed fraud",conf.length?"bad":"good"],
+    [money(FLAGS.reduce((s,f)=>s+f.amount,0)),"flagged amount",""],[rate,"confirm rate",""]
+  ].map(([v,l,c])=>`<div class="kpi ${c}"><div class="v" id="kpi-${l.replace(/ /g,"-")}">${v}</div><div class="l">${l}</div></div>`).join("");
+}
+function renderQueue(){
+  $("#queueCount").textContent=FLAGS.filter(f=>f.status==="open").length+" open";
+  const tb=$("#queueTable tbody");
+  const rows=[...FLAGS].sort((a,b)=>{
+    const k=SORT.k; let x=a[k],y=b[k];
+    if(k==="amount"||k==="score") return (x-y)*SORT.dir;
+    return String(x).localeCompare(String(y))*SORT.dir;
+  });
+  tb.innerHTML=rows.map(f=>`<tr data-id="${f.id}" class="${SEL===f.id?"sel":""} ${f.status==="open"?"":"done"}">
+    <td class="mono">${f.id}</td><td><b>${f.rule}</b></td>
+    <td>${f.account}<br><span style="color:var(--dim)">${f.accountName}</span></td>
+    <td class="mono">${money(f.amount)}</td><td class="score">${f.score}</td>
+    <td><span class="chip ${f.status}">${f.status}</span></td></tr>`).join("");
+  tb.querySelectorAll("tr").forEach(tr=>tr.onclick=()=>{SEL=tr.dataset.id;renderQueue();renderDetail();});
+}
+function renderDetail(){
+  const d=$("#detail");
+  const f=FLAGS.find(x=>x.id===SEL);
+  if(!f){ d.innerHTML='<div class="empty">Select a case from the queue.</div>'; return; }
+  const tx=f.txns.map(t=>`<tr><td class="mono">${t.txn_id}</td><td>${new Date(t._t).toLocaleString("en-GB")}</td>
+    <td>${t.type}</td><td class="mono">${money(t.amount)}</td><td>${t.city}, ${t.country}</td>
+    <td>${t.channel}</td><td>${t.payee_id||"-"}${t.payee_new?" (new)":""}</td></tr>`).join("");
+  d.innerHTML=`<h3>${f.id} - ${f.ruleName}</h3>
+    <div class="sub">${f.account} - ${f.accountName} - risk score ${f.score} - <span class="chip ${f.status}">${f.status}</span></div>
+    <div class="evidence"><b>Why flagged:</b> ${f.rule} - ${RULES.find(r=>r.id===f.rule).desc}. ${f.txns.length} transaction(s), total ${money(f.amount)}.</div>
+    <div class="txlist"><table><thead><tr><th>Txn</th><th>Time</th><th>Type</th><th>Amount</th><th>Place</th><th>Channel</th><th>Payee</th></tr></thead><tbody>${tx}</tbody></table></div>
+    <label for="note">Analyst note</label>
+    <textarea id="note" placeholder="What did you find?">${f.note}</textarea>
+    <div class="actions">
+      <button id="confirmBtn" class="primary" ${f.status==="open"?"":"disabled"}>Confirm fraud</button>
+      <button id="dismissBtn" ${f.status==="open"?"":"disabled"}>Dismiss</button>
+      <button id="escalateBtn" ${f.status==="open"?"":"disabled"}>Escalate</button>
+    </div>
+    <div id="sarSlot">${f.status==="confirmed"?sarHTML(f):""}</div>`;
+  $("#confirmBtn")&&($("#confirmBtn").onclick=()=>setStatus(f,"confirmed"));
+  $("#dismissBtn")&&($("#dismissBtn").onclick=()=>setStatus(f,"dismissed"));
+  $("#escalateBtn")&&($("#escalateBtn").onclick=()=>setStatus(f,"escalated"));
+}
+function setStatus(f,st){
+  f.note=$("#note")?$("#note").value:f.note;
+  f.status=st;
+  renderKPIs();renderQueue();renderDetail();renderChart();
+  toast(`Case ${f.id} marked ${st}.`);
+}
+function sarText(f){
+  const first=f.txns[0],last=f.txns[f.txns.length-1];
+  return `Subject: Account ${f.account} (${f.accountName})\n`+
+`Activity window: ${new Date(first._t).toLocaleString("en-GB")} to ${new Date(last._t).toLocaleString("en-GB")}\n`+
+`Pattern: ${f.ruleName} (${f.rule}). ${f.txns.length} transaction(s) totalling ${money(f.amount)} were flagged by rule-based screening.\n`+
+`Detail: ${f.txns.map(t=>`${t.txn_id} ${t.type} ${money(t.amount)} via ${t.channel} at ${t.city}, ${t.country}`).join("; ")}.\n`+
+(f.note?`Analyst note: ${f.note}\n`:"")+
+`Recommendation: file for review; retain records per retention policy.`;
+}
+function sarHTML(f){
+  return `<div class="sar" id="sarBlock"><h4>Draft suspicious-activity narrative</h4>${sarText(f)}</div>
+  <div class="actions"><button id="copySar">Copy narrative</button></div>`;
+}
+function renderChart(){
+  const byRule={};
+  FLAGS.forEach(f=>byRule[f.rule]=(byRule[f.rule]||0)+1);
+  const max=Math.max(1,...Object.values(byRule));
+  $("#ruleChart").innerHTML=RULES.map(r=>{
+    const n=byRule[r.id]||0;
+    return `<div class="bar-row"><span class="mono" style="width:80px">${r.id}</span>
+    <div class="bar" style="width:${Math.round(260*n/max)}px"></div><span>${n}</span>
+    <span style="color:var(--dim)">${r.name}</span></div>`;
+  }).join("");
+}
+function toast(msg){ const t=$("#toast"); t.textContent=msg; t.style.display="block"; clearTimeout(t._h); t._h=setTimeout(()=>t.style.display="none",2600); }
+function banner(kind,msg){ const b=$("#banner"); b.className=kind; b.textContent=msg; if(kind==="ok") setTimeout(()=>{b.className="";b.style.display="none";},4000); }
+// ---------- Load / rescan ----------
+function loadTransactions(txns,label){
+  TXNS=txns; FLAGS=scan(TXNS); SEL=null;
+  renderKPIs();renderQueue();renderDetail();renderChart();
+  banner("ok",`Loaded ${TXNS.length} transactions from ${label}: ${FLAGS.length} flags raised.`);
+}
+// ---------- Wire up ----------
+$("#uploadBtn").onclick=()=>$("#fileInput").click();
+$("#fileInput").onchange=e=>{
+  const file=e.target.files[0]; if(!file) return;
+  const rd=new FileReader();
+  rd.onload=()=>{ try{ loadTransactions(parseCSV(String(rd.result)),file.name); }catch(err){ banner("error","Upload failed: "+err.message); } };
+  rd.readAsText(file);
+};
+$("#exportBtn").onclick=()=>{
+  const report={generated:new Date().toISOString(),dataset:$("#dataset").value,
+    totals:{transactions:TXNS.length,flags:FLAGS.length,
+      confirmed:FLAGS.filter(f=>f.status==="confirmed").length,
+      dismissed:FLAGS.filter(f=>f.status==="dismissed").length,
+      escalated:FLAGS.filter(f=>f.status==="escalated").length},
+    cases:FLAGS.map(f=>({id:f.id,rule:f.rule,account:f.account,account_name:f.accountName,
+      amount:f.amount,score:f.score,status:f.status,note:f.note,
+      sar:f.status==="confirmed"?sarText(f):undefined}))};
+  $("#exportJson").textContent=JSON.stringify(report,null,2);
+  $("#exportModal").classList.add("open");
+  $("#downloadBtn").onclick=()=>{
+    const blob=new Blob([$("#exportJson").textContent],{type:"application/json"});
+    const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+    a.download="flagline-report.json"; a.click(); toast("Report downloaded.");
+  };
+};
+$("#exportClose").onclick=()=>$("#exportModal").classList.remove("open");
+$("#rulesBtn").onclick=()=>{
+  $("#rulesForm").innerHTML=RULES.map((r,i)=>`<label>
+    <input type="checkbox" data-i="${i}" class="ruleOn" ${r.on?"checked":""}>
+    <b class="mono">${r.id}</b> ${r.name} - <span style="color:var(--dim)">${r.desc}</span></label>`).join("");
+  $("#rulesModal").classList.add("open");
+};
+$("#rulesClose").onclick=()=>$("#rulesModal").classList.remove("open");
+$("#rulesApply").onclick=()=>{
+  document.querySelectorAll(".ruleOn").forEach(cb=>{RULES[+cb.dataset.i].on=cb.checked;});
+  FLAGS=scan(TXNS); SEL=null;
+  renderKPIs();renderQueue();renderDetail();renderChart();
+  $("#rulesModal").classList.remove("open");
+  toast("Rescanned with updated rules: "+FLAGS.length+" flags.");
+};
+$("#queueTable").querySelectorAll("th").forEach(th=>th.onclick=()=>{
+  const k=th.dataset.k; SORT.dir=(SORT.k===k)?-SORT.dir:1; SORT.k=k; renderQueue();
+});
+document.querySelectorAll(".modal").forEach(m=>m.addEventListener("click",e=>{if(e.target===m)m.classList.remove("open");}));
+document.addEventListener("click",e=>{ if(e.target&&e.target.id==="copySar"){ navigator.clipboard.writeText(sarText(FLAGS.find(x=>x.id===SEL))).then(()=>toast("Narrative copied.")); }});
+// ---------- Boot ----------
+try{ loadTransactions(parseCSV(document.getElementById("embedded-csv").textContent),"built-in dataset"); }
+catch(err){ banner("error","Built-in dataset failed: "+err.message); }
+</script>
+</body>
+</html>

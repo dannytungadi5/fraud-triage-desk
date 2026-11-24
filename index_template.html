@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flagline - Fraud Triage Desk</title>
+<style>
+:root{
+  --bg:#0d1117; --panel:#151b24; --panel2:#1b232f; --line:#2a3442;
+  --text:#dbe4ee; --dim:#8b98a9; --accent:#f0b429; --red:#e5534b; --green:#57ab5a; --blue:#539bf5;
+}
+*{box-sizing:border-box; margin:0; padding:0}
+body{background:var(--bg); color:var(--text); font:14px/1.5 "Segoe UI",system-ui,sans-serif}
+header{display:flex; align-items:center; gap:16px; padding:12px 20px; background:var(--panel); border-bottom:1px solid var(--line); flex-wrap:wrap}
+.brand{font-size:18px; font-weight:700; letter-spacing:.5px}
+.brand span{color:var(--accent)}
+.brand small{display:block; font-size:11px; color:var(--dim); font-weight:400; letter-spacing:2px; text-transform:uppercase}
+.controls{margin-left:auto; display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+button{background:var(--panel2); color:var(--text); border:1px solid var(--line); border-radius:6px; padding:7px 12px; cursor:pointer; font-size:13px}
+button:hover{border-color:var(--accent)}
+button.primary{background:var(--accent); color:#111; border-color:var(--accent); font-weight:600}
+button.danger{color:var(--red)}
+button:disabled{opacity:.45; cursor:not-allowed}
+select,input[type=text],textarea{background:var(--panel2); color:var(--text); border:1px solid var(--line); border-radius:6px; padding:7px 10px; font-size:13px}
+.kpis{display:grid; grid-template-columns:repeat(6,1fr); gap:10px; padding:14px 20px}
+.kpi{background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:10px 14px}
+.kpi .v{font-size:22px; font-weight:700}
+.kpi .l{font-size:11px; color:var(--dim); text-transform:uppercase; letter-spacing:1px}
+.kpi.warn .v{color:var(--accent)} .kpi.bad .v{color:var(--red)} .kpi.good .v{color:var(--green)}
+main{display:grid; grid-template-columns:1.35fr 1fr; gap:14px; padding:0 20px 20px}
+.panel{background:var(--panel); border:1px solid var(--line); border-radius:8px; overflow:hidden}
+.panel h2{font-size:13px; text-transform:uppercase; letter-spacing:1px; color:var(--dim); padding:12px 16px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:10px}
+.panel h2 .count{background:var(--accent); color:#111; border-radius:10px; padding:0 8px; font-weight:700}
+table{width:100%; border-collapse:collapse; font-size:13px}
+th,td{padding:8px 12px; text-align:left; border-bottom:1px solid var(--line)}
+th{color:var(--dim); font-size:11px; text-transform:uppercase; letter-spacing:.5px; cursor:pointer; user-select:none}
+tbody tr{cursor:pointer}
+tbody tr:hover{background:var(--panel2)}
+tbody tr.sel{background:#223047}
+tbody tr.done{opacity:.5}
+.mono{font-family:ui-monospace,Consolas,monospace; font-size:12px}
+.chip{display:inline-block; padding:1px 8px; border-radius:10px; font-size:11px; font-weight:600}
+.chip.open{background:#3d2e0a; color:var(--accent)}
+.chip.confirmed{background:#4a1512; color:var(--red)}
+.chip.dismissed{background:#12261a; color:var(--green)}
+.chip.escalated{background:#12263a; color:var(--blue)}
+.score{font-weight:700}
+.detail{padding:16px}
+.detail h3{font-size:16px; margin-bottom:4px}
+.detail .sub{color:var(--dim); font-size:12px; margin-bottom:12px}
+.evidence{background:var(--panel2); border-left:3px solid var(--accent); padding:10px 12px; border-radius:0 6px 6px 0; margin:10px 0; font-size:13px}
+.txlist{max-height:180px; overflow:auto; margin:10px 0; border:1px solid var(--line); border-radius:6px}
+.actions{display:flex; gap:8px; margin:12px 0; flex-wrap:wrap}
+textarea{width:100%; min-height:56px; resize:vertical}
+.sar{background:#101820; border:1px solid var(--line); border-radius:6px; padding:12px; margin-top:12px; font-size:13px; white-space:pre-wrap}
+.sar h4{color:var(--accent); margin-bottom:6px}
+.empty{padding:40px; text-align:center; color:var(--dim)}
+#banner{display:none; padding:10px 20px; font-weight:600}
+#banner.error{display:block; background:#4a1512; color:#ffb4ae}
+#banner.ok{display:block; background:#12261a; color:#7ee2a0}
+#toast{position:fixed; bottom:20px; right:20px; background:var(--panel2); border:1px solid var(--accent); padding:10px 16px; border-radius:8px; display:none; z-index:50}
+.modal{position:fixed; inset:0; background:rgba(0,0,0,.6); display:none; align-items:center; justify-content:center; z-index:40}
+.modal.open{display:flex}
+.modal .box{background:var(--panel); border:1px solid var(--line); border-radius:10px; width:min(680px,92vw); max-height:84vh; overflow:auto; padding:18px}
+.modal pre{background:var(--panel2); padding:12px; border-radius:6px; overflow:auto; font-size:12px; max-height:50vh}
+.rules label{display:flex; align-items:center; gap:8px; padding:6px 0; font-size:13px}
+.rules input[type=number]{width:70px; background:var(--panel2); border:1px solid var(--line); color:var(--text); border-radius:4px; padding:3px 6px}
+footer{padding:10px 20px; color:var(--dim); font-size:12px; border-top:1px solid var(--line)}
+.bar-row{display:flex; align-items:center; gap:8px; margin:3px 0; font-size:12px}
+.bar{height:12px; border-radius:3px; background:var(--accent); min-width:2px}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">FLAG<span>LINE</span><small>fraud triage desk</small></div>
+  <div class="controls">
+    <select id="dataset" aria-label="Dataset">
+      <option value="builtin">Northbridge Mutual - March 2026 (built in)</option>
+    </select>
+    <button id="uploadBtn">Upload CSV</button>
+    <input type="file" id="fileInput" accept=".csv,text/csv" style="display:none">
+    <button id="rulesBtn">Rules</button>
+    <button id="exportBtn" class="primary">Export report</button>
+  </div>
+</header>
+<div id="banner" role="alert"></div>
+<section class="kpis" id="kpis"></section>
+<main>
+  <section class="panel">
+    <h2>Flag queue <span class="count" id="queueCount">0</span></h2>
+    <div style="max-height:70vh; overflow:auto">
+    <table id="queueTable" aria-label="Flag queue">
+      <thead><tr>
+        <th data-k="id">Case</th><th data-k="rule">Rule</th><th data-k="account">Account</th>
+        <th data-k="amount">Amount</th><th data-k="score">Score</th><th data-k="status">Status</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+    </div>
+  </section>
+  <section class="panel" id="detailPanel">
+    <h2>Case detail</h2>
+    <div class="detail" id="detail"><div class="empty">Select a case from the queue.</div></div>
+  </section>
+</main>
+<section class="panel" style="margin:0 20px 20px">
+  <h2>Flags by rule</h2>
+  <div class="detail" id="ruleChart"></div>
+</section>
+<div class="modal" id="rulesModal"><div class="box rules">
+  <h3 style="margin-bottom:10px">Detection rules</h3>
+  <div id="rulesForm"></div>
+  <div class="actions"><button id="rulesApply" class="primary">Apply and rescan</button><button id="rulesClose">Close</button></div>
+</div></div>
+<div class="modal" id="exportModal"><div class="box">
+  <h3 style="margin-bottom:10px">Case report</h3>
+  <p style="color:var(--dim);font-size:12px;margin-bottom:8px">JSON, ready to attach to a filing or handoff.</p>
+  <pre id="exportJson"></pre>
+  <div class="actions"><button id="downloadBtn" class="primary">Download JSON</button><button id="exportClose">Close</button></div>
+</div></div>
+<div id="toast" role="status"></div>
+<footer>Flagline - built by an AI coding agent, verified by Kane CLI. Sample data is synthetic.</footer>
+<script id="embedded-csv" type="text/plain">__EMBEDDED_CSV__</script>
+<script>
+"use strict";
+// ---------- CSV parsing ----------
+function parseCSV(text){
+  if(typeof text!=="string" || !text.trim()) throw new Error("empty file");
+  const rows=[]; let row=[],cell="",q=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(q){ if(c==='"'){ if(text[i+1]==='"'){cell+='"';i++;} else q=false; } else cell+=c; }
+    else if(c==='"') q=true;
+    else if(c===','){ row.push(cell); cell=""; }
+    else if(c==='\n'||c==='\r'){ if(c==='\r'&&text[i+1]==='\n') i++; row.push(cell); cell=""; if(row.length>1||row[0]!=="") rows.push(row); row=[]; }
+    else cell+=c;
+  }
+  if(cell!==""||row.length){ row.push(cell); rows.push(row); }
+  if(rows.length<2) throw new Error("no data rows found");
+  const head=rows[0].map(h=>h.trim());
+  const need=["txn_id","ts","account_id","account_name","type","amount","channel","city","country","payee_id","payee_new","balance_after"];
+  const missing=need.filter(c=>!head.includes(c));
+  if(missing.length) throw new Error("missing columns: "+missing.join(", "));
+  const out=[];
+  for(let r=1;r<rows.length;r++){
+    const o={}; head.forEach((h,i)=>o[h]=(rows[r][i]||"").trim());
+    const amt=Number(o.amount);
+    if(!o.txn_id) throw new Error("row "+(r+1)+": missing txn_id");
+    if(!Number.isFinite(amt)) throw new Error("row "+(r+1)+": bad amount '"+o.amount+"'");
+    const t=Date.parse(o.ts);
+    if(Number.isNaN(t)) throw new Error("row "+(r+1)+": bad timestamp '"+o.ts+"'");
+    o.amount=amt; o._t=t; o.payee_new=/^true$/i.test(o.payee_new);
+    out.push(o);
+  }
+  return out;
+}
+// ---------- Rules engine ----------
+const RULES=[
+ {id:"STRUCT-01",name:"Sub-threshold structuring",desc:"3+ cash deposits of $9,000-$9,999 within 72h",on:true,p:{minCount:3,lo:9000,hi:9999,hours:72},weight:40},
+ {id:"VELOC-02",name:"Transaction velocity burst",desc:"5+ transactions within 60 minutes",on:true,p:{minCount:5,minutes:60},weight:25},
+ {id:"DORM-03",name:"Dormant account bust-out",desc:"180+ days quiet, then a withdrawal of $10,000+",on:true,p:{days:180,minAmt:10000},weight:35},
+ {id:"ROUND-04",name:"Round amount to new payee",desc:"Transfer of $10,000+ in a round figure to a first-time payee",on:true,p:{minAmt:10000},weight:20},
+ {id:"GEO-05",name:"Impossible travel",desc:"Same account used in two cities within 90 minutes",on:true,p:{minutes:90},weight:30},
+];
+function scan(txns){
+  const flags=[];
+  const byAcct={};
+  txns.forEach(t=>{(byAcct[t.account_id]=byAcct[t.account_id]||[]).push(t);});
+  Object.values(byAcct).forEach(list=>list.sort((a,b)=>a._t-b._t));
+  const R=Object.fromEntries(RULES.map(r=>[r.id,r]));
+  if(R["STRUCT-01"].on){
+    const p=R["STRUCT-01"].p;
+    for(const [acct,list] of Object.entries(byAcct)){
+      const cash=list.filter(t=>t.type==="cash_deposit"&&t.amount>=p.lo&&t.amount<=p.hi);
+      for(let i=0;i<cash.length;i++){
+        const win=cash.filter(t=>t._t>=cash[i]._t&&t._t<=cash[i]._t+p.hours*3600e3);
+        if(win.length>=p.minCount){ flags.push(mkFlag("STRUCT-01",acct,win)); break; }
+      }
+    }
+  }
+  if(R["VELOC-02"].on){
+    const p=R["VELOC-02"].p;
+    for(const [acct,list] of Object.entries(byAcct)){
+      for(let i=0;i<list.length;i++){
+        const win=list.filter(t=>t._t>=list[i]._t&&t._t<=list[i]._t+p.minutes*60e3);
+        if(win.length>=p.minCount){ flags.push(mkFlag("VELOC-02",acct,win)); break; }
+      }
+    }
+  }
+  if(R["DORM-03"].on){
+    const p=R["DORM-03"].p;
+    for(const [acct,list] of Object.entries(byAcct)){
+      for(let i=1;i<list.length;i++){
+        const gap=(list[i]._t-list[i-1]._t)/86400e3;
+        if(gap>=p.days&&list[i].type==="withdrawal"&&list[i].amount>=p.minAmt){ flags.push(mkFlag("DORM-03",acct,[list[i-1],list[i]])); break; }
+      }
+    }
+  }
+  if(R["ROUND-04"].on){
+    const p=R["ROUND-04"].p;
+    for(const [acct,list] of Object.entries(byAcct)){
+      const hit=list.filter(t=>t.type==="transfer_out"&&t.amount>=p.minAmt&&t.amount%1000===0&&t.payee_new);
+      if(hit.length) flags.push(mkFlag("ROUND-04",acct,hit));
+    }
+  }
+  if(R["GEO-05"].on){
+    const p=R["GEO-05"].p;
+    for(const [acct,list] of Object.entries(byAcct)){
+      let done=false;
+      for(let i=0;i<list.length&&!done;i++) for(let j=i+1;j<list.length&&!done;j++){
+        const dt=(list[j]._t-list[i]._t)/60e3;
+        if(dt>p.minutes) break;
+        if(list[i].city!==list[j].city){ flags.push(mkFlag("GEO-05",acct,[list[i],list[j]])); done=true; }
+      }
+    }
+  }
+  flags.sort((a,b)=>b.score-a.score);
+  flags.forEach((f,i)=>f.id="FLAG-"+String(i+1).padStart(4,"0"));
+  return flags;
+}
+function mkFlag(ruleId,acct,txns){
+  const rule=RULES.find(r=>r.id===ruleId);
+  const amount=txns.reduce((s,t)=>s+t.amount,0);
+  const score=Math.min(99,rule.weight+Math.round(txns.length*4)+Math.round(amount/5000));
+  return {id:"",rule:ruleId,ruleName:rule.name,account:acct,accountName:txns[0].account_name,
+    txns,amount,score,status:"open",note:"",weight:rule.weight};
+}
+// ---------- State ----------
+let TXNS=[],FLAGS=[],SEL=null,SORT={k:"score",dir:-1};
+// ---------- Render ----------
+const $=s=>document.querySelector(s);
+const money=n=>"$"+n.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+function renderKPIs(){
+  const open=FLAGS.filter(f=>f.status==="open");
+  const conf=FLAGS.filter(f=>f.status==="confirmed");
+  const dism=FLAGS.filter(f=>f.status==="dismissed");
+  const rate=(conf.length+dism.length)?Math.round(100*conf.length/(conf.length+dism.length))+"%":"-";
+  $("#kpis").innerHTML=[
+    [TXNS.length,"transactions",""],[FLAGS.length,"flags raised",FLAGS.length?"warn":""],
+    [open.length,"open cases",open.length?"warn":"good"],[conf.length,"confirmed fraud",conf.length?"bad":"good"],
+    [money(FLAGS.reduce((s,f)=>s+f.amount,0)),"flagged amount",""],[rate,"confirm rate",""]
+  ].map(([v,l,c])=>`<div class="kpi ${c}"><div class="v" id="kpi-${l.replace(/ /g,"-")}">${v}</div><div class="l">${l}</div></div>`).join("");
+}
+function renderQueue(){
+  $("#queueCount").textContent=FLAGS.filter(f=>f.status==="open").length+" open";
+  const tb=$("#queueTable tbody");
+  const rows=[...FLAGS].sort((a,b)=>{
+    const k=SORT.k; let x=a[k],y=b[k];
+    if(k==="amount"||k==="score") return (x-y)*SORT.dir;
+    return String(x).localeCompare(String(y))*SORT.dir;
+  });
+  tb.innerHTML=rows.map(f=>`<tr data-id="${f.id}" class="${SEL===f.id?"sel":""} ${f.status==="open"?"":"done"}">
+    <td class="mono">${f.id}</td><td><b>${f.rule}</b></td>
+    <td>${f.account}<br><span style="color:var(--dim)">${f.accountName}</span></td>
+    <td class="mono">${money(f.amount)}</td><td class="score">${f.score}</td>
+    <td><span class="chip ${f.status}">${f.status}</span></td></tr>`).join("");
+  tb.querySelectorAll("tr").forEach(tr=>tr.onclick=()=>{SEL=tr.dataset.id;renderQueue();renderDetail();});
+}
+function renderDetail(){
+  const d=$("#detail");
+  const f=FLAGS.find(x=>x.id===SEL);
+  if(!f){ d.innerHTML='<div class="empty">Select a case from the queue.</div>'; return; }
+  const tx=f.txns.map(t=>`<tr><td class="mono">${t.txn_id}</td><td>${new Date(t._t).toLocaleString("en-GB")}</td>
+    <td>${t.type}</td><td class="mono">${money(t.amount)}</td><td>${t.city}, ${t.country}</td>
+    <td>${t.channel}</td><td>${t.payee_id||"-"}${t.payee_new?" (new)":""}</td></tr>`).join("");
+  d.innerHTML=`<h3>${f.id} - ${f.ruleName}</h3>
+    <div class="sub">${f.account} - ${f.accountName} - risk score ${f.score} - <span class="chip ${f.status}">${f.status}</span></div>
+    <div class="evidence"><b>Why flagged:</b> ${f.rule} - ${RULES.find(r=>r.id===f.rule).desc}. ${f.txns.length} transaction(s), total ${money(f.amount)}.</div>
+    <div class="txlist"><table><thead><tr><th>Txn</th><th>Time</th><th>Type</th><th>Amount</th><th>Place</th><th>Channel</th><th>Payee</th></tr></thead><tbody>${tx}</tbody></table></div>
+    <label for="note">Analyst note</label>
+    <textarea id="note" placeholder="What did you find?">${f.note}</textarea>
+    <div class="actions">
+      <button id="confirmBtn" class="primary" ${f.status==="open"?"":"disabled"}>Confirm fraud</button>
+      <button id="dismissBtn" ${f.status==="open"?"":"disabled"}>Dismiss</button>
+      <button id="escalateBtn" ${f.status==="open"?"":"disabled"}>Escalate</button>
+    </div>
+    <div id="sarSlot">${f.status==="confirmed"?sarHTML(f):""}</div>`;
+  $("#confirmBtn")&&($("#confirmBtn").onclick=()=>setStatus(f,"confirmed"));
+  $("#dismissBtn")&&($("#dismissBtn").onclick=()=>setStatus(f,"dismissed"));
+  $("#escalateBtn")&&($("#escalateBtn").onclick=()=>setStatus(f,"escalated"));
+}
+function setStatus(f,st){
+  f.note=$("#note")?$("#note").value:f.note;
+  f.status=st;
+  renderKPIs();renderQueue();renderDetail();renderChart();
+  toast(`Case ${f.id} marked ${st}.`);
+}
+function sarText(f){
+  const first=f.txns[0],last=f.txns[f.txns.length-1];
+  return `Subject: Account ${f.account} (${f.accountName})\n`+
+`Activity window: ${new Date(first._t).toLocaleString("en-GB")} to ${new Date(last._t).toLocaleString("en-GB")}\n`+
+`Pattern: ${f.ruleName} (${f.rule}). ${f.txns.length} transaction(s) totalling ${money(f.amount)} were flagged by rule-based screening.\n`+
+`Detail: ${f.txns.map(t=>`${t.txn_id} ${t.type} ${money(t.amount)} via ${t.channel} at ${t.city}, ${t.country}`).join("; ")}.\n`+
+(f.note?`Analyst note: ${f.note}\n`:"")+
+`Recommendation: file for review; retain records per retention policy.`;
+}
+function sarHTML(f){
+  return `<div class="sar" id="sarBlock"><h4>Draft suspicious-activity narrative</h4>${sarText(f)}</div>
+  <div class="actions"><button id="copySar">Copy narrative</button></div>`;
+}
+function renderChart(){
+  const byRule={};
+  FLAGS.forEach(f=>byRule[f.rule]=(byRule[f.rule]||0)+1);
+  const max=Math.max(1,...Object.values(byRule));
+  $("#ruleChart").innerHTML=RULES.map(r=>{
+    const n=byRule[r.id]||0;
+    return `<div class="bar-row"><span class="mono" style="width:80px">${r.id}</span>
+    <div class="bar" style="width:${Math.round(260*n/max)}px"></div><span>${n}</span>
+    <span style="color:var(--dim)">${r.name}</span></div>`;
+  }).join("");
+}
+function toast(msg){ const t=$("#toast"); t.textContent=msg; t.style.display="block"; clearTimeout(t._h); t._h=setTimeout(()=>t.style.display="none",2600); }
+function banner(kind,msg){ const b=$("#banner"); b.className=kind; b.textContent=msg; if(kind==="ok") setTimeout(()=>{b.className="";b.style.display="none";},4000); }
+// ---------- Load / rescan ----------
+function loadTransactions(txns,label){
+  TXNS=txns; FLAGS=scan(TXNS); SEL=null;
+  renderKPIs();renderQueue();renderDetail();renderChart();
+  banner("ok",`Loaded ${TXNS.length} transactions from ${label}: ${FLAGS.length} flags raised.`);
+}
+// ---------- Wire up ----------
+$("#uploadBtn").onclick=()=>$("#fileInput").click();
+$("#fileInput").onchange=e=>{
+  const file=e.target.files[0]; if(!file) return;
+  const rd=new FileReader();
+  rd.onload=()=>{ try{ loadTransactions(parseCSV(String(rd.result)),file.name); }catch(err){ banner("error","Upload failed: "+err.message); } };
+  rd.readAsText(file);
+};
+$("#exportBtn").onclick=()=>{
+  const report={generated:new Date().toISOString(),dataset:$("#dataset").value,
+    totals:{transactions:TXNS.length,flags:FLAGS.length,
+      confirmed:FLAGS.filter(f=>f.status==="confirmed").length,
+      dismissed:FLAGS.filter(f=>f.status==="dismissed").length,
+      escalated:FLAGS.filter(f=>f.status==="escalated").length},
+    cases:FLAGS.map(f=>({id:f.id,rule:f.rule,account:f.account,account_name:f.accountName,
+      amount:f.amount,score:f.score,status:f.status,note:f.note,
+      sar:f.status==="confirmed"?sarText(f):undefined}))};
+  $("#exportJson").textContent=JSON.stringify(report,null,2);
+  $("#exportModal").classList.add("open");
+  $("#downloadBtn").onclick=()=>{
+    const blob=new Blob([$("#exportJson").textContent],{type:"application/json"});
+    const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+    a.download="flagline-report.json"; a.click(); toast("Report downloaded.");
+  };
+};
+$("#exportClose").onclick=()=>$("#exportModal").classList.remove("open");
+$("#rulesBtn").onclick=()=>{
+  $("#rulesForm").innerHTML=RULES.map((r,i)=>`<label>
+    <input type="checkbox" data-i="${i}" class="ruleOn" ${r.on?"checked":""}>
+    <b class="mono">${r.id}</b> ${r.name} - <span style="color:var(--dim)">${r.desc}</span></label>`).join("");
+  $("#rulesModal").classList.add("open");
+};
+$("#rulesClose").onclick=()=>$("#rulesModal").classList.remove("open");
+$("#rulesApply").onclick=()=>{
+  document.querySelectorAll(".ruleOn").forEach(cb=>{RULES[+cb.dataset.i].on=cb.checked;});
+  FLAGS=scan(TXNS); SEL=null;
+  renderKPIs();renderQueue();renderDetail();renderChart();
+  $("#rulesModal").classList.remove("open");
+  toast("Rescanned with updated rules: "+FLAGS.length+" flags.");
+};
+$("#queueTable").querySelectorAll("th").forEach(th=>th.onclick=()=>{
+  const k=th.dataset.k; SORT.dir=(SORT.k===k)?-SORT.dir:1; SORT.k=k; renderQueue();
+});
+document.querySelectorAll(".modal").forEach(m=>m.addEventListener("click",e=>{if(e.target===m)m.classList.remove("open");}));
+document.addEventListener("click",e=>{ if(e.target&&e.target.id==="copySar"){ navigator.clipboard.writeText(sarText(FLAGS.find(x=>x.id===SEL))).then(()=>toast("Narrative copied.")); }});
+// ---------- Boot ----------
+try{ loadTransactions(parseCSV(document.getElementById("embedded-csv").textContent),"built-in dataset"); }
+catch(err){ banner("error","Built-in dataset failed: "+err.message); }
+</script>
+</body>
+</html>
