@@ -556,7 +556,7 @@ function renderChart(){
   }).join("");
 }
 function toast(msg){ const t=$("#toast"); t.textContent=msg; t.style.display="block"; clearTimeout(t._h); t._h=setTimeout(()=>t.style.display="none",2600); }
-function banner(kind,msg){ const b=$("#banner"); b.className=kind; b.textContent=msg; if(kind==="ok") setTimeout(()=>{b.className="";b.style.display="none";},4000); }
+function banner(kind,msg){ const b=$("#banner"); b.className=kind; b.style.display="block"; b.textContent=msg; if(kind==="ok") setTimeout(()=>{b.className="";b.style.display="none";},4000); }
 // ---------- Load / rescan ----------
 function loadTransactions(txns,label){
   TXNS=txns; FLAGS=scan(TXNS); SEL=null;
