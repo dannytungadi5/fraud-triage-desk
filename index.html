@@ -44,7 +44,9 @@ select,input[type=text],textarea{
   background:var(--panel); color:var(--ink); border:1.5px solid var(--line2);
   border-radius:2px; padding:7px 10px; font-size:13px;
 }
-.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+input[type=file]{font:11px ui-monospace,monospace;color:var(--dim);max-width:230px}
+input[type=file]::file-selector-button{background:var(--panel);color:var(--ink);border:1.5px solid var(--ink);border-radius:2px;padding:7px 14px;font:12px ui-monospace,monospace;letter-spacing:.5px;text-transform:uppercase;box-shadow:2px 2px 0 var(--line2);cursor:pointer;margin-right:10px}
+input[type=file]::file-selector-button:hover{background:var(--panel2)}
 .kpis{display:grid; grid-template-columns:repeat(6,1fr); gap:12px; padding:18px 24px 6px}
 .kpi{
   background:var(--panel); border:1px solid var(--line2); border-top:4px solid var(--ink);
@@ -142,8 +144,7 @@ footer{
     <select id="dataset" aria-label="Dataset">
       <option value="builtin">Northbridge Mutual - March 2026 (built in)</option>
     </select>
-    <button id="uploadBtn">Upload CSV</button>
-    <input type="file" id="fileInput" accept=".csv,text/csv" class="sr-only" aria-label="Choose CSV file">
+    <input type="file" id="fileInput" accept=".csv,text/csv" aria-label="Upload CSV" title="Upload CSV">
     <button id="rulesBtn">Rules</button>
     <button id="exportBtn" class="primary">Export report</button>
   </div>
@@ -556,7 +557,6 @@ function loadTransactions(txns,label){
   banner("ok",`Loaded ${TXNS.length} transactions from ${label}: ${FLAGS.length} flags raised.`);
 }
 // ---------- Wire up ----------
-$("#uploadBtn").onclick=()=>$("#fileInput").click();
 $("#fileInput").onchange=e=>{
   const file=e.target.files[0]; if(!file) return;
   const rd=new FileReader();
