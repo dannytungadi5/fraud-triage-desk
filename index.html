@@ -143,11 +143,11 @@ footer{
   <div class="controls">
     <select id="dataset" aria-label="Dataset">
       <option value="builtin">Northbridge Mutual - March 2026 (built in)</option>
-      <option value="badsample">Malformed sample - row 2 bad amount</option>
     </select>
     <input type="file" id="fileInput" accept=".csv,text/csv" aria-label="Upload CSV" title="Upload CSV">
     <input type="text" id="urlInput" placeholder="or paste CSV URL" aria-label="CSV URL" style="width:170px">
     <button id="loadUrlBtn" title="Load CSV from URL">Load URL</button>
+    <button id="badSampleBtn" title="Validate a malformed CSV sample">Try malformed CSV</button>
     <button id="rulesBtn">Rules</button>
     <button id="exportBtn" class="primary">Export report</button>
   </div>
@@ -622,21 +622,10 @@ $("#queueTable").querySelectorAll("th").forEach(th=>th.onclick=()=>{
 document.querySelectorAll(".modal").forEach(m=>m.addEventListener("click",e=>{if(e.target===m)m.classList.remove("open");}));
 document.addEventListener("click",e=>{ if(e.target&&e.target.id==="copySar"){ navigator.clipboard.writeText(sarText(FLAGS.find(x=>x.id===SEL))).then(()=>toast("Narrative copied.")); }});
 // ---------- Boot ----------
-let _dsLast=$("#dataset").value;
-function datasetChanged(){
-  const sel=$("#dataset"); const v=sel.value;
-  if(v===_dsLast) return; _dsLast=v;
-  if(v==="badsample"){
-    try{ loadTransactions(parseCSV(document.getElementById("embedded-bad-csv").textContent),"malformed sample"); }
-    catch(err){ banner("error","Upload failed: "+err.message); }
-    return;
-  }
-  try{ loadTransactions(parseCSV(document.getElementById("embedded-csv").textContent),"built-in dataset"); }
-  catch(err){ banner("error","Built-in dataset failed: "+err.message); }
-}
-$("#dataset").addEventListener("change",datasetChanged);
-$("#dataset").addEventListener("input",datasetChanged);
-setInterval(datasetChanged,400);
+$("#badSampleBtn").onclick=()=>{
+  try{ loadTransactions(parseCSV(document.getElementById("embedded-bad-csv").textContent),"malformed sample"); }
+  catch(err){ banner("error","Upload failed: "+err.message); }
+};
 try{ loadTransactions(parseCSV(document.getElementById("embedded-csv").textContent),"built-in dataset"); }
 catch(err){ banner("error","Built-in dataset failed: "+err.message); }
 </script>
