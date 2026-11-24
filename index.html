@@ -627,7 +627,6 @@ $("#dataset").onchange=e=>{
   if(v==="badsample"){
     try{ loadTransactions(parseCSV(document.getElementById("embedded-bad-csv").textContent),"malformed sample"); }
     catch(err){ banner("error","Upload failed: "+err.message); }
-    e.target.value="builtin";
     return;
   }
   try{ loadTransactions(parseCSV(document.getElementById("embedded-csv").textContent),"built-in dataset"); }
